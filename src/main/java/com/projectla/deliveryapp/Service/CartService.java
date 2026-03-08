@@ -8,7 +8,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+//import java.util.ArrayList;
 
 @Service
 public class CartService {
@@ -178,14 +178,14 @@ public class CartService {
     // CREATE CART
     // =========================
 
-    private Cart createCart(User user) {
+    // private Cart createCart(User user) {
 
-        Cart cart = new Cart();
-        cart.setUser(user);
-        cart.setItems(new ArrayList<>());
+    //     Cart cart = new Cart();
+    //     cart.setUser(user);
+    //     cart.setItems(new ArrayList<>());
 
-        return cartRepository.save(cart);
-    }
+    //     return cartRepository.save(cart);
+    // }
 
     // =========================
     // DEBUG
