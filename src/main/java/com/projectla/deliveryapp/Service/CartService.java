@@ -4,10 +4,11 @@ import com.projectla.deliveryapp.Dto.CartItemResponse;
 import com.projectla.deliveryapp.Dto.CartResponse;
 import com.projectla.deliveryapp.Entity.*;
 import com.projectla.deliveryapp.Repository.*;
-
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
 
 @Service
 public class CartService {
@@ -21,13 +22,22 @@ public class CartService {
                        ProductRepository productRepository,
                        CartRepository cartRepository,
                        CartItemRepository cartItemRepository) {
+
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
     }
 
-public CartResponse addToCart(Long userId, Long productId, Integer quantity) {
+    // =========================
+    // ADD TO CART
+    // =========================
+
+    public CartResponse addToCart(Long userId, Long productId, Integer quantity) {
+
+    if (quantity == null || quantity <= 0) {
+        throw new RuntimeException("Invalid quantity");
+    }
 
     User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
@@ -45,46 +55,106 @@ public CartResponse addToCart(Long userId, Long productId, Integer quantity) {
     CartItem cartItem = cartItemRepository
             .findByCartIdAndProductId(cart.getId(), productId)
             .orElse(null);
-            
 
     if (cartItem != null) {
+
+        // update quantity
         cartItem.setQuantity(cartItem.getQuantity() + quantity);
+
     } else {
+
+        // create new item
         cartItem = new CartItem();
         cartItem.setCart(cart);
         cartItem.setProduct(product);
         cartItem.setQuantity(quantity);
-        cart.getItems().add(cartItem);
+
     }
 
     cartItemRepository.save(cartItem);
 
     return getCart(userId);
 }
+    // =========================
+    // REDUCE QUANTITY
+    // =========================
 
-public CartResponse removeItem(Long userId, Long productId) {
+    public CartResponse reduceQuantity(Long userId, Long productId, Integer quantity) {
 
-    Cart cart = cartRepository.findByUserId(userId)
-            .orElseThrow(() -> new RuntimeException("Cart not found"));
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("Invalid quantity");
+        }
 
-    CartItem cartItem = cartItemRepository
-            .findByCartIdAndProductId(cart.getId(), productId)
-            .orElseThrow(() -> new RuntimeException("Product not in cart"));
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
-    cartItemRepository.delete(cartItem);
+        CartItem cartItem = cartItemRepository
+                .findByCartIdAndProductId(cart.getId(), productId)
+                .orElseThrow(() -> new RuntimeException("Product not in cart"));
 
-    return getCart(userId);
-}
+        int currentQty = cartItem.getQuantity();
 
-public CartResponse clearCart(Long userId) {
+        if (quantity >= currentQty) {
 
-    Cart cart = cartRepository.findByUserId(userId)
-            .orElseThrow(() -> new RuntimeException("Cart not found"));
+            cartItemRepository.delete(cartItem);
 
-    cartItemRepository.deleteAll(cart.getItems());
+            if (cart.getItems() != null) {
+                cart.getItems().remove(cartItem);
+            }
 
-    return getCart(userId);
-}
+        } else {
+
+            cartItem.setQuantity(currentQty - quantity);
+            cartItemRepository.save(cartItem);
+        }
+
+        return getCart(userId);
+    }
+
+    // =========================
+    // REMOVE ITEM COMPLETELY
+    // =========================
+
+    public CartResponse removeItem(Long userId, Long productId) {
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+
+        CartItem cartItem = cartItemRepository
+                .findByCartIdAndProductId(cart.getId(), productId)
+                .orElseThrow(() -> new RuntimeException("Product not in cart"));
+
+        cartItemRepository.delete(cartItem);
+
+        if (cart.getItems() != null) {
+            cart.getItems().remove(cartItem);
+        }
+
+        return getCart(userId);
+    }
+
+    // =========================
+    // CLEAR CART
+    // =========================
+
+    public CartResponse clearCart(Long userId) {
+
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+
+        if (cart.getItems() != null) {
+
+            cartItemRepository.deleteAll(cart.getItems());
+
+            cart.getItems().clear();
+        }
+
+        return getCart(userId);
+    }
+
+    // =========================
+    // GET CART
+    // =========================
 
     public CartResponse getCart(Long userId) {
 
@@ -104,39 +174,26 @@ public CartResponse clearCart(Long userId) {
         return new CartResponse(cart.getId(), userId, items);
     }
 
-    public CartResponse reduceQuantity(Long userId, Long productId, Integer quantity) {
+    // =========================
+    // CREATE CART
+    // =========================
 
-    if (quantity == null || quantity <= 0) {
-        throw new RuntimeException("Invalid quantity");
+    private Cart createCart(User user) {
+
+        Cart cart = new Cart();
+        cart.setUser(user);
+        cart.setItems(new ArrayList<>());
+
+        return cartRepository.save(cart);
     }
 
-    Cart cart = cartRepository.findByUserId(userId)
-            .orElseThrow(() -> new RuntimeException("Cart not found"));
-
-    CartItem cartItem = cartItemRepository
-            .findByCartIdAndProductId(cart.getId(), productId)
-            .orElseThrow(() -> new RuntimeException("Product not in cart"));
-
-    int currentQty = cartItem.getQuantity();
-
-    if (quantity > currentQty) {
-        throw new RuntimeException("Reduction exceeds current quantity");
-    }
-
-    if (quantity.equals(currentQty)) {
-        cartItemRepository.delete(cartItem);
-        cart.getItems().remove(cartItem);
-    } else {
-        cartItem.setQuantity(currentQty - quantity);
-        cartItemRepository.save(cartItem);
-    }
-
-    return getCart(userId);
-}
+    // =========================
+    // DEBUG
+    // =========================
 
     public Cart debugCart(Long userId) {
-    return cartRepository.findByUserId(userId)
-            .orElseThrow(() -> new RuntimeException("Cart not found"));
-}
 
+        return cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+    }
 }
