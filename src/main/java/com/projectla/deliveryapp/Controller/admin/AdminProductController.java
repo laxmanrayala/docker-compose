@@ -1,6 +1,7 @@
 package com.projectla.deliveryapp.Controller.admin;
 
 import com.projectla.deliveryapp.Dto.AdminProductRequest;
+import com.projectla.deliveryapp.Dto.StockUpdateRequest;
 import com.projectla.deliveryapp.Entity.Product;
 import com.projectla.deliveryapp.Service.AdminProductService;
 
@@ -38,16 +39,20 @@ public class AdminProductController {
     @PatchMapping("/{id}/stock")
     public Product updateStock(
             @PathVariable Long id,
-            @RequestParam Integer stock) {
+            @RequestBody StockUpdateRequest request) {
 
-        return adminProductService.updateStock(id, stock);
+        return adminProductService.updateStock(id, request.getChange());
     }
 
-    @GetMapping
-    public Page<Product> getProducts(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size) {
+@GetMapping
+public Page<Product> getProducts(
 
-    return adminProductService.getProducts(page, size);
+    @RequestParam Long storeId,
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "10") int size
+) {
+
+    return adminProductService.getProductsByStore(storeId, page, size);
+
 }
 }

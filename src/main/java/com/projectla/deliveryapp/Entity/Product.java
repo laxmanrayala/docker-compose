@@ -16,9 +16,11 @@ public class Product {
 
     private String name;
     private Double price;
-    private Integer stock;
     private String description; 
     private String imageUrl;
+
+    @Column(nullable = false)
+    private Integer stock = 0;
 
 
     @ManyToOne
